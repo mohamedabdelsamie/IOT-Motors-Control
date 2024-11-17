@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta and Title -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IOT Motors Control Panel</title>
+
+    <!-- CSS Links -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/demo.css') }}">
+
+    <!-- Socket.IO and jQuery Libraries -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Custom Styles -->
+    <style>
+        /* Custom slider thumb with rectangular shape */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 35px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 35px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        input[type="range"]::-ms-thumb {
+            width: 18px;
+            height: 35px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<header class="cd__intro">
+    <h1>Motors Control Panel</h1>
+</header>
+
+<main class="cd__main" style="display: flex; justify-content: space-between; align-items: center; padding: 0 50px;">
+    <!-- Left-aligned Intensity Slider -->
+    <div style="display: flex; flex-direction: column; align-items: center;">
+        <span style="color: white; padding-bottom: 15px;" for="slider2">Intensity</span>
+        <div class="wrapper">
+            <input type="range" id="slider2" min="0" max="100" value="50" step="1"/>
+        </div>
+    </div>
+
+    <!-- Right-aligned Position Slider and Buttons -->
+    <div style="display: flex; align-items: center; gap: 30px;">
+        <!-- Position Slider -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <span style="color: white; padding-bottom: 15px;" for="slider1">Position</span>
+            <div class="wrapper">
+                <input type="range" id="slider1" min="0" max="100" value="50" step="50"/>
+            </div>
+        </div>
+
+        <!-- Button Container to the right of Position slider -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <!-- Loop button -->
+            <button onclick="handleLoop()" style="background: none; border: none; display: flex; flex-direction: column; align-items: center;">
+                <img src="{{ url_for('static', filename='images/loop-1426687_640.png') }}" alt="Loop" width="60" height="60"/>
+                <div style="color:white; margin-top: 5px;">Loop</div>
+            </button>
+
+            <!-- Stop button -->
+            <button onclick="handleStop()" style="background: none; border: none; display: flex; flex-direction: column; align-items: center; margin-top: 10px;">
+                <img src="{{ url_for('static', filename='images/Stop.png') }}" alt="Stop" width="60" height="60"/>
+                <div style="color:white; margin-top: 5px;">Stop</div>
+            </button>
+        </div>
+    </div>
+</main>
+
+<footer class="cd__credit" style="margin-bottom: 35px;">
+    <h2>Motors Settings</h2>
+</footer>
+
+<main class="cd__main">
+    <!-- Motor Mood with Loop Button -->
+    <div style="text-align: center; margin-top: 20px;">
+        <!-- Motor Mood label -->
+        <h3 style="color: white; padding-left: 30px;">Motor Speed: <span id="Motor_mood2" style="color:white;">50</span></h3>    
+    </div>
+
+    <!-- Motor Speed section -->
+    <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: center;">
+        <h3 style="color: white;">Motor Mood: <span id="Motor_mood" style="color:white;">50</span></h3>
+    </div>
+</main>
+
+<footer class="cd__credit" style="margin-bottom: 35px;">
+    <h2>System Connection Status</h2>
+</footer>
+
+<main class="cd__main">
+    <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: center;">
+        <h3 style="color: white;">Controller : <span id="Controller_status" style="color:red;">offline</span></h3>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: center;">
+        <h3 style="color: white;">Server : <span id="MQTT_status">Unknown</span></h3>
+    </div>
+</main>
+
+<footer class="cd__credit" style="margin-bottom: 35px;">
+</footer>
+
+<!-- Script JS -->
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+<!-- Updated Script Section -->
+<script>
+$(document).ready(function() {
+    let looping_Flag = 0;
+    $('#Motor_mood').css({ 'color': 'red' });
+    $('#Motor_mood').text("OFF");
+
+    $('#Motor_mood2').css({ 'color': 'red' });
+    $('#Motor_mood2').text("OFF");
+
+    const socket = io();
+
+    function sendSliderValue(sliderId, value) {
+        socket.emit('slider_value', { id: sliderId, value: value });
+    }
+
+    // Socket event handlers
+    socket.on('broker_status', function(data) {
+        if (data.status == 'connected') {
+            $('#MQTT_status').css({ 'color': 'green' });
+            $('#MQTT_status').text(data.status);
+        } else {
+            $('#MQTT_status').css({ 'color': 'red' });
+            $('#MQTT_status').text(data.status);
+        }
+    });
+
+    socket.on('looping_Flag', function(data) {
+        if(data.value == 1){
+            looping_Flag = 1;
+            console.log("Loop button clicked");
+            slider1.value = 50;
+            $('#Motor_mood').css({ 'color': 'green' });
+            $('#Motor_mood').text("Looping");
+        } else {
+            looping_Flag = 0;
+            $('#Motor_mood').css({ 'color': 'red' });
+            $('#Motor_mood').text("OFF");
+        }
+    });
+
+    socket.on('Controller_Connection_Flag', function(data) {
+        if(data.value == 1){
+            $('#Controller_status').css({ 'color': 'green' });
+            $('#Controller_status').text("online");
+        } else {
+            $('#Controller_status').css({ 'color': 'red' });
+            $('#Controller_status').text("offline");
+        }
+    });
+
+    socket.on('intensity_Value', function(data) {
+        if (data.value < 20) {
+            slider2.value = 0;
+            $('#Motor_mood2').css({ 'color': 'red' });
+            $('#Motor_mood2').text("OFF");
+        } else {
+            $('#Motor_mood2').css({ 'color': 'green' });
+            slider2.value = data.value;
+            $('#Motor_mood2').text(slider2.value + " %");
+        }
+    });
+
+    socket.on('position_Value', function(data) {
+        slider1.value = data.value;
+        if(slider1.value == 100){
+            $('#Motor_mood').css({ 'color': 'green' });
+            $('#Motor_mood').text("Forward");
+        } else if(slider1.value == 0){
+            $('#Motor_mood').css({ 'color': 'green' });
+            $('#Motor_mood').text("Reverse");    
+        } else {
+            if(looping_Flag == 0){
+                $('#Motor_mood').css({ 'color': 'red' });
+                $('#Motor_mood').text("OFF");
+            } else {
+                slider1.value = 50;
+                $('#Motor_mood').css({ 'color': 'green' });
+                $('#Motor_mood').text("Looping");
+            }
+        }
+    });
+
+    const slider1 = document.getElementById('slider1');
+    const slider2 = document.getElementById('slider2');
+
+    // Updated event listener for slider1
+    slider1.addEventListener('change', function() {
+        if(slider1.value == 100){
+            sendSliderValue('slider1', slider1.value);
+            $('#Motor_mood').css({ 'color': 'green' });
+            $('#Motor_mood').text("Forward");
+        } else if(slider1.value == 0){
+            sendSliderValue('slider1', slider1.value);
+            $('#Motor_mood').css({ 'color': 'green' });
+            $('#Motor_mood').text("Reverse");    
+        } else {
+            sendSliderValue('slider1', slider1.value);
+            $('#Motor_mood').css({ 'color': 'red' });
+            $('#Motor_mood').text("OFF");
+        }
+    });
+
+    // Updated event listener for slider2
+    slider2.addEventListener('change', function() {
+        if (slider2.value < 20) {
+            slider2.value = 0;
+            sendSliderValue('slider2', slider2.value);
+            $('#Motor_mood2').css({ 'color': 'red' });
+            $('#Motor_mood2').text("OFF");
+        } else {
+            $('#Motor_mood2').css({ 'color': 'green' });
+            $('#Motor_mood2').text(slider2.value + " %");
+            sendSliderValue('slider2', slider2.value);
+        }
+    });
+
+    // Button handlers
+    window.handleLoop = function() {
+        console.log("Loop button clicked");
+        slider1.value = 50;
+        sendSliderValue('slider1', slider1.value);
+        $('#Motor_mood').css({ 'color': 'green' });
+        $('#Motor_mood').text("Looping");
+        socket.emit('looping_Flag', { value: 1 });
+    };
+
+    window.handleStop = function() {
+        console.log("Stop button clicked");
+        slider1.value = 50;
+        looping_Flag = 0;
+        sendSliderValue('slider1', slider1.value);
+        $('#Motor_mood').css({ 'color': 'red' });
+        $('#Motor_mood').text("OFF");
+        socket.emit('looping_Flag', { value: 0 });
+        socket.emit('stop_Flag', { value: 1 });
+    };
+});
+</script>
+
+</body>
+</html>
