@@ -4,9 +4,9 @@
 #include "Position_Motor_Headers/Position_Motor_Interface.h"
 #include "Wifi_Headers/Wifi_Credentials.h"
 
-const char* mqtt_server = "78.111.89.85";
-const char* Broker_User_Name = "IOT";
-const char* Broker_Password = "IOT_Steve";
+const char* mqtt_server = "..........";
+const char* Broker_User_Name = ".....";
+const char* Broker_Password = "..........";
 
 // Define PWM properties
 const int pwmChannel = 0;     // PWM channel
